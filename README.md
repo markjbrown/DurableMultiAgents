@@ -1,8 +1,52 @@
-# Durable Multi Agents
+<div id="top"></div> <h1 align="center"> <a href="https://travelagency.iamdivakarkumar.com/" style="text-decoration: none;" target="_blank"> <img height="240" src="./docs/images/logo.png" alt="ContosoTravelAgency Logo"/> <br/> ContosoTravelAgency </a> </h1> <p align="center"> <b>Explore how ContosoTravelAgency leverage Azure Durable Functions and Semantic Kernel to build sophisticated Multi-Agent workflows.</b> </p> <br/>
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/uuybgktnmsy3q3efegx0.gif)
+<p align="center">
+  <a href="https://travelagency.iamdivakarkumar.com/" target="_blank" style="text-decoration: none;">
+    <img src="https://img.shields.io/badge/Visit%20ContosoTravelAgency-blue?style=for-the-badge&logo=azure" alt="Visit ContosoTravelAgency"/>
+  </a>
+   <a href="https://contosotravelagency.iamdivakarkumar.com/" target="_blank" style="text-decoration: none;">
+    <img src="https://img.shields.io/badge/More%20Info-blue?style=for-the-badge&logo=azure" alt="More Info"/>
+  </a>
+</p>
+
+![Banner Image](docs/images/banner.png)
+![Image description](docs/images/screenshot.png)
+
+# Architecture
+
+![Image description](docs/images/DurableMultiAgents.jpg)
 
 Durable Multi Agents is an attempt to make use of Azure Durable Functions with Semantic Kernel to build Multi-Agents workflows.
+
+<b style="color:orange">
+
+```quote
+Disclaimer: Realtime Agent only works in local environment, will be updated soon to work in live URL
+```
+
+</b>
+
+# High level components
+
+![Image description](docs/images/azuredurablefunction.png)
+
+
+# Distributed Tracing
+
+## Jaeger tracing
+
+![Image description](docs/images/distributedtracing-1.png)
+
+![Image description](docs/images/distributedtracing-2.png)
+
+![Image description](docs/images/distributedtracing-3.png)
+
+![Image description](docs/images/distributedtracing-4.png)
+
+
+## Application Insights
+
+![Image description](docs/images/distributedtracing-5.png)
 
 # Highlights
 
@@ -14,20 +58,39 @@ Durable Multi Agents is an attempt to make use of Azure Durable Functions with S
 - High scalability of each agents
 - Managed Idenitty connectivity to Azure OpenAI and Azure Cosmos DB services
 - Provided seed data project for you to get started
+- Switch between Custom/SingleAI/AutoGen based Multi-Agents on the fly.
+- Monitoring agent's responses in the side pane of the application
+- Distributed tracing support 
+
+## Prerequisites
+
+1. Install the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd?tabs=winget-windows%2Cbrew-mac%2Cscript-linux&pivots=os-windows)
+2. Install the [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=windows%2Ccsharp%2Cbash)
+3. Install Powershell (dotnet tool update --global PowerShell)
+
 
 # Deploy to Azure
 
 The easiest way to deploy this app is using the [Azure Developer CLI](https://aka.ms/azd).
 
-To provision and deploy:
+## To provision and deploy:
+
 1) Open a new terminal and do the following from root folder:
 ```bash
 azd up
 ```
+2) **[Optional]** Once the deployment is complete, make sure to update the settings with postmark server token in the Azure Portal. This is to ensure the email notifications are sent properly.
+3) **[Optional]** If you want to switch to a different user, update the settings in the Azure Portal with the new userId.
+4) **[optional]** If you want to connect with Microsoft Data fabric , follow this [blog]() for instructions to setup. 
 
 # Steps to run the project locally
 
-Update the `local.settings.json` with the below details
+> **IMPORTANT**  
+> For existing users of ContosoTravelAgency:  
+> Make sure to add `HARD_RELOAD` in the `.env` file under the `.azure` folder to clear existing tables and rewrite with new data.
+
+
+Add the `local.settings.json` in the Azure Durable Function project, with the below details
 
 ```json
 {
@@ -43,15 +106,15 @@ Update the `local.settings.json` with the below details
     "DatabaseAccount": "Your_DatabaseAccount_Here",
     "DatabaseId": "Your_DatabaseId_Here",
     "TenantId": "Your_TenantId_Here",
-    "PostmarkServerToken": "Your_PostmarkServerToken_Here",
-    "FromMailAddress": "Your_FromMailAddress_Here",    
+    "PostmarkServerToken": "Your_PostmarkServerToken_Here",    
     "cosmosDB__clientSecret": "Your_ClientSecret_Here",
     "cosmosDB__tenantId": "Your_TenantId_Here",
     "cosmosDB__clientId": "Your_ClientId_Here",
     "cosmosDB__accountEndpoint": "Your_CosmosDBAccountEndpoint_Here",
     "OpenAIEndpoint": "Your_OpenAI_Endpoint",
     "OpenAIChatCompletionDeploymentName": "Your_OpenAI_ChatCompletion_Deployment_Name",
-    "OpenAITextEmbeddingGenerationDeploymentName": "Your_OpenAI_TextEmbedding_Deployment_Name"
+    "OpenAITextEmbeddingGenerationDeploymentName": "Your_OpenAI_TextEmbedding_Deployment_Name",
+    "RedisConnectionString":"Your_Redis_Conn_string"
   }
 }
 ```
@@ -130,14 +193,9 @@ Update the `local.settings.json` with the below details
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/q4n93u2v2zqcbs2a9niw.png)
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/r2t3o53oc3greupyrv4b.png)
 
-
-
-
-
 ## Similarity based query 
 
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5rbdwe8cwlt5b26ibkvy.png)
-
 
 User query : "Have I visited any beach destinations in the past?"
 
@@ -157,12 +215,14 @@ User query : "Have I visited any beach destinations in the past?"
 
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/j2fpbhgwko9cn5vmz6o9.png)
 
+# Live URL
+https://travelagency.iamdivakarkumar.com/
+
 # Sponsor
 
 Leave a ⭐ if you like this project
 
 <a href="https://www.buymeacoffee.com/divakarkumar" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145 !important;" ></a>
-
 
 &copy; [Divakar Kumar](//github.com/Divakar-Kumar)
 

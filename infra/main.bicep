@@ -13,13 +13,14 @@ param location string
 param travelServiceMultiAgentOrchestratorDefinition object
 
 @description('Location for the OpenAI resource group')
-@allowed(['australiaeast', 'canadaeast', 'francecentral', 'southindia', 'uksouth', 'swedencentral', 'westus'])
+@allowed(['australiaeast', 'canadaeast', 'francecentral', 'southindia', 'uksouth', 'swedencentral', 'westus', 'eastus', 'eastus2'])
 @metadata({
   azd: {
     type: 'location'
   }
 })
 param openAILocation string
+param realtimeOpenAILocation string
 
 param openAISku string = 'S0'
 
@@ -29,6 +30,9 @@ param chatGptModelVersion string = '2024-05-13'
 param embeddingDeploymentName string = 'embedding'
 param embeddingDeploymentCapacity int = 120
 param embeddingModelName string = 'text-embedding-ada-002'
+param realtimeDeploymentName string = 'realtime'
+param realtimeModelName string = 'gpt-4o-realtime-preview'
+param realtimeModelVersion string = '2024-10-01'
 
 
 var tags = {
@@ -74,8 +78,10 @@ module travelServiceMultiAgentOrchestrator './app/TravelService.MultiAgent.Orche
     tags: tags
     identityName: '${abbrs.managedIdentityUserAssignedIdentities}travelservice-${resourceToken}'
     applicationInsightsName: monitoring.outputs.applicationInsightsName
+    apimName: '${abbrs.apiManagementService}travelservice${resourceToken}'
     runtimeName: 'dotnet-isolated'
     runtimeVersion: '8.0'    
+    redisCacheName: '${abbrs.cacheRedis}travelservice${resourceToken}'
     storageAccountName: '${abbrs.storageStorageAccounts}${resourceToken}'    
     appDefinition: travelServiceMultiAgentOrchestratorDefinition    
     openAiLocation: openAILocation
@@ -111,10 +117,93 @@ module travelServiceMultiAgentOrchestrator './app/TravelService.MultiAgent.Orche
   scope: rg
 }
 
+module travelServiceCustomerUI './app/TravelService.CustomerUI.bicep' = {
+  name: 'TravelService.CustomerUI.AppService'
+  params: {
+    name: '${abbrs.webSites}${resourceToken}'
+    location: location
+    tags: tags    
+    identityName: '${abbrs.managedIdentityUserAssignedIdentities}travelserviceui-${resourceToken}'
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
+    redisCacheName: travelServiceMultiAgentOrchestrator.outputs.redisCacheName
+    functionAppName: travelServiceMultiAgentOrchestrator.outputs.functionAppName
+    appServicePlanName: 'asp-${abbrs.webSites}${resourceToken}'
+    realtimeDeploymentName: realtimeDeploymentName
+    realtimeOpenAILocation: realtimeOpenAILocation
+    openAiSkuName: openAISku
+    deployments: [
+      {
+        name: realtimeDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: realtimeModelName
+          version: realtimeModelVersion
+        }
+        scaleSettings: {
+          scaleType: 'Standard'
+        }
+      }      
+    ] 
+  }
+  scope: rg
+}
+
+module containerAppServices './app/ContainerAppServices.bicep' = {
+  name: 'ContainerAppService'
+  params: {
+    name: '${abbrs.appContainerApps}${resourceToken}'
+    location: location
+    tags: tags
+    storageAccountName: '${abbrs.storageStorageAccounts}${resourceToken}'
+    logAnalyticsName: monitoring.outputs.logAnalyticsWorkspaceName
+    apimName: '${abbrs.apiManagementService}travelservice${resourceToken}'
+    containerAppsEnvironmentName: '${abbrs.appManagedEnvironments}travelservice-${resourceToken}'    
+    workspaceId: monitoring.outputs.logAnalyticsWorkspaceId
+    sqlServerName: '${abbrs.sqlServers}travelservice-${resourceToken}'
+    sqlAdminUsername: 'sqladmin'
+    sqlAdminPassword: 'P@ssw0rd1234'
+    cosmos_name: '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
+    services: [
+      {
+        name: '${abbrs.appContainerApps}bookingservice'
+        deploymentName: 'BookingService'   
+        imageName: '${abbrs.containerRegistryRegistries}travelservice.azurecr.io/durablemultiagents/bookingservice-contosotravelagency:latest'        
+      }
+      {
+        name: '${abbrs.appContainerApps}flightservice'
+        deploymentName: 'FlightService'
+        sqlServerName: '${abbrs.sqlServers}travelservice-${resourceToken}'
+        sqlDatabaseName: 'FlightServiceDB'
+        imageName: '${abbrs.containerRegistryRegistries}travelservice.azurecr.io/durablemultiagents/flightservice-contosotravelagency:latest'               
+      }
+      {
+        name: '${abbrs.appContainerApps}userservice'
+        deploymentName: 'UserService'        
+        sqlServerName: '${abbrs.sqlServers}travelservice-${resourceToken}'
+        sqlDatabaseName: 'UserServiceDB'
+        imageName: '${abbrs.containerRegistryRegistries}travelservice.azurecr.io/durablemultiagents/userservice-contosotravelagency:latest'
+      }
+      {
+        name: '${abbrs.appContainerApps}weatherservice'
+        deploymentName: 'WeatherService'        
+        imageName: '${abbrs.containerRegistryRegistries}travelservice.azurecr.io/durablemultiagents/weatherservice-contosotravelagency:latest'
+      }
+    ]
+    containerRegistryName: '${abbrs.containerRegistryRegistries}travelservice${resourceToken}'
+    identityName: '${abbrs.managedIdentityUserAssignedIdentities}travelservice-${resourceToken}'
+  }
+  scope: rg
+}
+
+
 output OPENAI_API_URL string = travelServiceMultiAgentOrchestrator.outputs.apiUrl
 output OPENAI_DEPLOYMENT_NAME string = travelServiceMultiAgentOrchestrator.outputs.chatGptDeploymentName
 output COSMOSDB_ACCOUNT_NAME string = travelServiceMultiAgentOrchestrator.outputs.cosmosDBAccountName
+output FLIGHT_CONNECTION_STRING string = containerAppServices.outputs.FlightServiceConnectionString
+output USER_CONNECTION_STRING string = containerAppServices.outputs.UserServiceConnectionString
 output AZURE_OPENAI_LOCATION string = openAILocation
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerAppServices.outputs.containerRegistryEndpoint
 output AZURE_TENANT_ID string = tenant().tenantId
 output RESOURCE_GROUP_NAME string = rg.name
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId

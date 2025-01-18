@@ -5,18 +5,53 @@ metadata:
     template: azd-init@1.5.0
 services:
     TravelService.MultiAgent.Orchestrator:
-        project: src\TravelService.MultiAgent.Orchestrator
+        project: src\DurableAgent\TravelService.MultiAgent.Orchestrator
         host: function
         language: dotnet  
-hooks:
+    TravelService.CustomerUI:
+        project: src\WebApp\TravelService.CustomerUI
+        host: appservice
+        language: dotnet
+    FlightService:
+        project: src\Services\FlightService
+        language: dotnet
+        host: containerapp
+        docker:
+            path: ./Dockerfile
+            image: 'durablemultiagents/flightservice-contosotravelagency:latest'                               
+    WeatherService:
+        project: src\Services\WeatherService
+        host: containerapp
+        language: dotnet
+        docker:
+            path: ./Dockerfile
+            image: 'durablemultiagents/weatherservice-contosotravelagency:latest'            
+    UserService:
+        project: src\Services\UserService
+        host: containerapp
+        language: dotnet
+        docker:
+            path: ./Dockerfile
+            image: 'durablemultiagents/userservice-contosotravelagency:latest'            
+    BookingService:
+        project: src\Services\BookingService
+        host: containerapp
+        language: dotnet        
+        docker:
+            path: ./Dockerfile
+            image: 'durablemultiagents/bookingservice-contosotravelagency:latest'                       
+hooks: 
   postprovision:    
     shell: pwsh
-    run: |
-      # Fetch environment variable values using azd env get-values
-      $envVars = azd env get-values --output json | ConvertFrom-Json
-      # Extract individual environment variables
+    run: |     
+      $envVars = azd env get-values --output json | ConvertFrom-Json      
       $cosmosDBAccountName = $envVars.COSMOSDB_ACCOUNT_NAME
       $resourceGroupName = $envVars.RESOURCE_GROUP_NAME      
-      ./scripts/seedData.ps1 -cosmosDBAccountName $cosmosDBAccountName -resourceGroupName $resourceGroupName
+      $subscriptionId = $envVars.AZURE_SUBSCRIPTION_ID
+      $flightConnectionString = $envVars.FLIGHT_CONNECTION_STRING
+      $userConnectionString = $envVars.USER_CONNECTION_STRING
+      $tenantId = $envVars.AZURE_TENANT_ID
+      $hardReload = $envVars.HARD_RELOAD -eq "true" ? $true : $false
+      ./scripts/seedData.ps1 -cosmosDBAccountName $cosmosDBAccountName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionId -tenantId $tenantId -flightConnectionString $flightConnectionString -userConnectionString $userConnectionString -hardReload $hardReload
     continueOnError: false
     interactive: false
